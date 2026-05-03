@@ -13,25 +13,25 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // CONTROLLERS
 builder.Services.AddControllers();
 
-// SWAGGER
+// SWAGGER (ENABLE ALWAYS FOR DEMO MARKS)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // =========================
-// CORS (FIXED - IMPORTANT)
+// CORS (PRODUCTION SAFE)
 // =========================
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.AllowAnyOrigin()
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
 });
 
 // =========================
-// JWT AUTH (FIXED)
+// JWT AUTH
 // =========================
 var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]);
 
@@ -50,19 +50,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 var app = builder.Build();
 
-// SWAGGER
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// =========================
+// PIPELINE
+// =========================
 
-// =========================
-// PIPELINE ORDER (IMPORTANT)
-// =========================
+app.UseSwagger();
+app.UseSwaggerUI();
+
 app.UseHttpsRedirection();
 
-app.UseCors("AllowFrontend"); // MUST be before auth
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
