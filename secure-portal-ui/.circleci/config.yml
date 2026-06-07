@@ -1,0 +1,36 @@
+version: 2.1
+
+orbs:
+  sonarcloud: sonarsource/sonarcloud@2.0.0
+
+jobs:
+  build_test_scan:
+    docker:
+      - image: cimg/node:18.18
+
+    steps:
+      - checkout
+
+      # INSTALL DEPENDENCIES
+      - run:
+          name: Install dependencies
+          command: npm install
+
+      # RUN TESTS (React)
+      - run:
+          name: Run tests
+          command: npm test -- --watchAll=false --coverage
+
+      # BUILD PROJECT
+      - run:
+          name: Build React app
+          command: npm run build
+
+      # SONARQUBE SCAN
+      - sonarcloud/scan
+
+workflows:
+  main:
+    jobs:
+      - build_test_scan:
+          context: SonarCloud
