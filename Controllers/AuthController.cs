@@ -22,29 +22,41 @@ namespace SecurePortal.Controllers
             _config = config;
         }
 
-      
+
         [HttpPost("register")]
         public IActionResult Register(RegisterDto dto)
         {
-            
-            var exists = _context.Users.Any(x => x.Email == dto.Email);
-            if (exists)
-                return BadRequest("User already exists");
+            // Normalize email (VERY IMPORTANT)
+            var email = dto.Email.Trim().ToLower();
 
-           
+            // Check if user exists
+            var exists = _context.Users.Any(x => x.Email == email);
+
+            if (exists)
+            {
+                return BadRequest(new
+                {
+                    message = "User already exists"
+                });
+            }
+
+            // Create user
             var user = new User
             {
-                Email = dto.Email,
+                Email = email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password)
             };
 
             _context.Users.Add(user);
             _context.SaveChanges();
 
-            return Ok("User registered successfully");
+            return Ok(new
+            {
+                message = "User registered successfully"
+            });
         }
 
-       
+
         [HttpPost("login")]
         public IActionResult Login(LoginDto dto)
         {
