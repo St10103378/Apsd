@@ -1,0 +1,10 @@
+sonar.projectKey=secure-portal
+sonar.organization=ST10103378
+sonar.projectName=Secure Portal
+sonar.host.url=https://sonarcloud.io
+
+sonar.sources=src
+sonar.exclusions=node_modules/**,build/**
+
+sonar.sourceEncoding=UTF-8
+sonar.javascript.lcov.reportPaths=coverage/lcov.info
