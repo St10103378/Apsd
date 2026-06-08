@@ -47,7 +47,11 @@ jobs:
           command: dotnet tool install --global dotnet-sonarscanner
 
       - run:
-          name: Begin SonarQube / SonarCloud analysis
+          name: Add dotnet tools to PATH
+          command: echo 'export PATH="$PATH:/root/.dotnet/tools"' >> $BASH_ENV
+
+      - run:
+          name: Begin SonarCloud analysis
           command: |
             dotnet sonarscanner begin \
               /k:"${sonar_project_key}" \
@@ -68,7 +72,7 @@ jobs:
               /p:CoverletOutputFormat=opencover
 
       - run:
-          name: End SonarQube / SonarCloud analysis
+          name: End SonarCloud analysis
           command: dotnet sonarscanner end /d:sonar.token="${sonar_token}"
 
 workflows:
