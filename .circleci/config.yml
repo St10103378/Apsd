@@ -1,31 +1,96 @@
-# Use the latest 2.1 version of CircleCI pipeline process engine.
-# See: https://circleci.com/docs/reference/configuration-reference
+
 version: 2.1
+ 
+orbs:
 
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#jobs-overview & https://circleci.com/docs/reference/configuration-reference/#jobs
+   # Optional: Add more orbs if needed (e.g., for deployment)
+
+   # docker: circleci/docker@2.0
+ 
 jobs:
-  say-hello:
-    # Specify the execution environment. You can specify an image from Docker Hub or use one of our convenience images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/guides/execution-managed/executor-intro/ & https://circleci.com/docs/reference/configuration-reference/#executor-job
-    docker:
-      # Specify the version you desire here
-      # See: https://circleci.com/developer/images/image/cimg/base
-      - image: cimg/base:current
 
-    # Add steps to the job
-    # See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#steps-overview & https://circleci.com/docs/reference/configuration-reference/#steps
-    steps:
-      # Checkout the code as the first step.
-      - checkout
+   build:
+
+     docker:
+
+       - image: mcr.microsoft.com/dotnet/sdk:10.0
+
+     working_directory: ~/repo
+
+     steps:
+
+       - checkout
+ 
+      # Restore NuGet packages with caching
+
+       - restore_cache:
+
+           keys:
+
+             - dotnet-deps-v1-{{ checksum "SecurePortal.csproj" }}
+
+             - dotnet-deps-v1-
+ 
       - run:
-          name: "Say hello"
-          command: "echo Hello, World!"
 
-# Orchestrate jobs using workflows
-# See: https://circleci.com/docs/guides/orchestrate/workflows/ & https://circleci.com/docs/reference/configuration-reference/#workflows
+           name: Restore dependencies
+
+           command: dotnet restore SecurePortal.csproj
+ 
+      - save_cache:
+
+           paths:
+
+             - /root/.nuget/packages
+
+           key: dotnet-deps-v1-{{ checksum "SecurePortal.csproj" }}
+ 
+      # Build the application
+
+       - run:
+
+           name: Build
+
+           command: dotnet build SecurePortal.csproj --configuration Release --no-restore
+ 
+      # Run tests (if you have test projects)
+
+       - run:
+
+           name: Test
+
+           command: dotnet test --configuration Release --no-build
+ 
+      # Publish the application
+
+       - run:
+
+           name: Publish
+
+           command: |
+
+             dotnet publish SecurePortal.csproj \
+
+               --configuration Release \
+
+               --no-restore \
+
+               --output ./publish
+ 
+      # Store artifacts
+
+       - store_artifacts:
+
+           path: ./publish
+
+           destination: app-publish
+ 
 workflows:
-  say-hello-workflow: # This is the name of the workflow, feel free to change it to better match your workflow.
-    # Inside the workflow, you define the jobs you want to run.
-    jobs:
-      - say-hello
+
+   version: 2
+
+   build-and-test:
+
+     jobs:
+
+       - build
