@@ -8,7 +8,6 @@ jobs:
     steps:
       - checkout
 
-      # Restore with caching
       - restore_cache:
           keys:
             - dotnet-deps-v1-{{ checksum "SecurePortal.csproj" }}
@@ -23,32 +22,60 @@ jobs:
             - /root/.nuget/packages
           key: dotnet-deps-v1-{{ checksum "SecurePortal.csproj" }}
 
-      # Build
       - run:
           name: Build
           command: dotnet build SecurePortal.csproj --configuration Release --no-restore
 
-      # Test
       - run:
           name: Test
-          command: dotnet test --configuration Release --no-build
+          command: dotnet test --configuration Release --no-build --logger "trx"
 
-      # Publish
+  sonar-scan:
+    docker:
+      - image: mcr.microsoft.com/dotnet/sdk:10.0
+    working_directory: ~/repo
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - dotnet-deps-v1-{{ checksum "SecurePortal.csproj" }}
+            - dotnet-deps-v1-
+
       - run:
-          name: Publish
-          command: |
-            dotnet publish SecurePortal.csproj \
-              --configuration Release \
-              --no-restore \
-              --output ./publish
+          name: Install dotnet-sonarscanner
+          command: dotnet tool install --global dotnet-sonarscanner
 
-      # Store artifacts
-      - store_artifacts:
-          path: ./publish
-          destination: app-publish
+      - run:
+          name: Begin SonarQube / SonarCloud analysis
+          command: |
+            dotnet sonarscanner begin \
+              /k:"${sonar_project_key}" \
+              /n:"${sonar_project_key}" \
+              /o:"${sonar_org}" \
+              /v:"1.0" \
+              /d:sonar.host.url=https://sonarcloud.io \
+              /d:sonar.token="${sonar_token}" \
+              /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+              /d:sonar.coverage.exclusions="**/Migrations/**,**/obj/**,**/bin/**,**/Test/**"
+
+      - run:
+          name: Build and Test with Coverage
+          command: |
+            dotnet build SecurePortal.csproj --configuration Release
+            dotnet test SecurePortal.csproj --configuration Release --no-build \
+              /p:CollectCoverage=true \
+              /p:CoverletOutputFormat=opencover
+
+      - run:
+          name: End SonarQube / SonarCloud analysis
+          command: dotnet sonarscanner end /d:sonar.token="${sonar_token}"
 
 workflows:
   version: 2
-  build-and-test:
+  build-and-analyze:
     jobs:
       - build
+      - sonar-scan:
+          requires:
+            - build
