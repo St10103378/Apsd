@@ -1,95 +1,54 @@
 version: 2.1
- 
-orbs:
 
-   # Optional: Add more orbs if needed (e.g., for deployment)
-
-   # docker: circleci/docker@2.0
- 
 jobs:
+  build:
+    docker:
+      - image: mcr.microsoft.com/dotnet/sdk:10.0
+    working_directory: ~/repo
+    steps:
+      - checkout
 
-   build:
+      # Restore with caching
+      - restore_cache:
+          keys:
+            - dotnet-deps-v1-{{ checksum "SecurePortal.csproj" }}
+            - dotnet-deps-v1-
 
-     docker:
-
-       - image: mcr.microsoft.com/dotnet/sdk:10.0
-
-     working_directory: ~/repo
-
-     steps:
-
-       - checkout
- 
-      # Restore NuGet packages with caching
-
-       - restore_cache:
-
-           keys:
-
-             - dotnet-deps-v1-{{ checksum "SecurePortal.csproj" }}
-
-             - dotnet-deps-v1-
- 
       - run:
+          name: Restore dependencies
+          command: dotnet restore SecurePortal.csproj
 
-           name: Restore dependencies
-
-           command: dotnet restore SecurePortal.csproj
- 
       - save_cache:
+          paths:
+            - /root/.nuget/packages
+          key: dotnet-deps-v1-{{ checksum "SecurePortal.csproj" }}
 
-           paths:
+      # Build
+      - run:
+          name: Build
+          command: dotnet build SecurePortal.csproj --configuration Release --no-restore
 
-             - /root/.nuget/packages
+      # Test
+      - run:
+          name: Test
+          command: dotnet test --configuration Release --no-build
 
-           key: dotnet-deps-v1-{{ checksum "SecurePortal.csproj" }}
- 
-      # Build the application
+      # Publish
+      - run:
+          name: Publish
+          command: |
+            dotnet publish SecurePortal.csproj \
+              --configuration Release \
+              --no-restore \
+              --output ./publish
 
-       - run:
-
-           name: Build
-
-           command: dotnet build SecurePortal.csproj --configuration Release --no-restore
- 
-      # Run tests (if you have test projects)
-
-       - run:
-
-           name: Test
-
-           command: dotnet test --configuration Release --no-build
- 
-      # Publish the application
-
-       - run:
-
-           name: Publish
-
-           command: |
-
-             dotnet publish SecurePortal.csproj \
-
-               --configuration Release \
-
-               --no-restore \
-
-               --output ./publish
- 
       # Store artifacts
+      - store_artifacts:
+          path: ./publish
+          destination: app-publish
 
-       - store_artifacts:
-
-           path: ./publish
-
-           destination: app-publish
- 
 workflows:
-
-   version: 2
-
-   build-and-test:
-
-     jobs:
-
-       - build
+  version: 2
+  build-and-test:
+    jobs:
+      - build
